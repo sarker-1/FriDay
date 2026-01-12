@@ -6,6 +6,7 @@ import android.content.pm.PackageManager
 import android.os.Bundle
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
+import android.widget.ImageView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
@@ -14,6 +15,7 @@ import androidx.core.content.ContextCompat
 class MainActivity : AppCompatActivity() {
 
     private lateinit var speechRecognizer: SpeechRecognizer
+    private var isListening = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -21,7 +23,20 @@ class MainActivity : AppCompatActivity() {
 
         requestMicPermission()
         initSpeech()
-        startListening()
+
+        val powerButton = findViewById<ImageView>(R.id.powerButton)
+
+        powerButton.setOnClickListener {
+            if (!isListening) {
+                Toast.makeText(this, "Listening...", Toast.LENGTH_SHORT).show()
+                startListening()
+                isListening = true
+            } else {
+                speechRecognizer.stopListening()
+                Toast.makeText(this, "Stopped listening", Toast.LENGTH_SHORT).show()
+                isListening = false
+            }
+        }
     }
 
     private fun requestMicPermission() {
@@ -43,6 +58,7 @@ class MainActivity : AppCompatActivity() {
         speechRecognizer.setRecognitionListener(
             SimpleRecognitionListener { text ->
                 handleCommand(text)
+                isListening = false
             }
         )
     }
