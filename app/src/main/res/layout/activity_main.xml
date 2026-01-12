@@ -7,10 +7,15 @@
     <!-- Center Power Button -->
     <ImageView
         android:id="@+id/powerButton"
-        android:layout_width="120dp"
-        android:layout_height="120dp"
+        android:layout_width="140dp"
+        android:layout_height="140dp"
         android:layout_gravity="center"
-        android:src="@drawable/power_button"
-        android:contentDescription="Power Button"/>
+        android:src="@drawable/ic_power_button"
+        android:contentDescription="Power Button"
+        android:clickable="true"
+        android:focusable="true"
+        android:foreground="?attr/selectableItemBackgroundBorderless"
+        android:scaleType="centerInside"
+        android:padding="20dp" />
 
 </FrameLayout>
