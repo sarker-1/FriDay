@@ -28,24 +28,20 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private var cameraId: String? = null
     private var isListening = false
     private var isSpeaking = false
+    private var wakeActive = false   // 🔑 Wake word state
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        // 🔋 Start FriDay foreground background service
         ContextCompat.startForegroundService(
             this,
             Intent(this, FriDayService::class.java)
         )
 
-        // 🔊 Text to Speech
         tts = TextToSpeech(this, this)
-
-        // 🤖 Gemini helper
         geminiHelper = GeminiHelper()
 
-        // 🔦 Camera manager
         cameraManager = getSystemService(Context.CAMERA_SERVICE) as CameraManager
         cameraId = cameraManager.cameraIdList.firstOrNull()
 
@@ -54,11 +50,10 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         initSpeech()
     }
 
-    // 🔊 TTS init
     override fun onInit(status: Int) {
         if (status == TextToSpeech.SUCCESS) {
             tts.language = Locale.US
-            speak("Hello Boss. FriDay is ready.")
+            speak("FriDay is listening.")
         }
     }
 
@@ -97,7 +92,6 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         }
     }
 
-    // 🔋 Battery optimization ignore request
     private fun requestIgnoreBatteryOptimization() {
         try {
             val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
@@ -109,7 +103,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                     )
                 )
             }
-        } catch (_: Exception) { }
+        } catch (_: Exception) {}
     }
 
     private fun initSpeech() {
@@ -117,7 +111,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         speechRecognizer.setRecognitionListener(
             SimpleRecognitionListener { text ->
                 isListening = false
-                handleCommand(text)
+                handleSpeech(text)
             }
         )
     }
@@ -135,13 +129,36 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         speechRecognizer.startListening(intent)
     }
 
-    // 🎤 MAIN COMMAND LOGIC
-    private fun handleCommand(command: String) {
-        val text = command.lowercase().trim()
+    // 🧠 Wake word logic
+    private fun handleSpeech(spokenText: String) {
+        val text = spokenText.lowercase().trim()
+
+        if (!wakeActive) {
+            if (text.contains("friday")) {
+                wakeActive = true
+                speak("Yes?")
+            } else {
+                startListening()
+            }
+            return
+        }
+
+        wakeActive = false
+        handleCommand(text)
+    }
+
+    // 🎤 COMMAND LOGIC
+    private fun handleCommand(text: String) {
 
         when {
-            text.contains("hello") -> {
-                speak("Hello Boss. How can I help you?")
+            // ✅ Custom identity
+            text.contains("who are you") -> {
+                speak("I'm FriDay. Your personal robot.")
+            }
+
+            // ✅ Greeting (always Hi!)
+            text.contains("hello") || text.contains("hi") -> {
+                speak("Hi!")
             }
 
             text.contains("flashlight on") -> {
@@ -159,28 +176,17 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                 startActivity(Intent(Settings.Panel.ACTION_WIFI))
             }
 
-            text.contains("open wifi settings") -> {
-                speak("Opening WiFi settings.")
-                startActivity(Intent(Settings.ACTION_WIFI_SETTINGS))
-            }
-
-            // 🤖 Gemini fallback
             else -> {
                 speak("Thinking.")
                 geminiHelper.getGeminiReply(text) { reply ->
                     runOnUiThread {
-                        val cleanReply = reply
-                            .replace("\n", " ")
-                            .take(400)
-
-                        speak(cleanReply)
+                        speak(reply.take(350))
                     }
                 }
             }
         }
     }
 
-    // 🔦 Flashlight
     private fun turnFlashlight(state: Boolean) {
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
