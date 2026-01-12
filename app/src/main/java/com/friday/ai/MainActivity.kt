@@ -28,7 +28,6 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private var cameraId: String? = null
     private var isListening = false
     private var isSpeaking = false
-    private var wakeActive = false   // 🔑 Wake word state
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -53,7 +52,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     override fun onInit(status: Int) {
         if (status == TextToSpeech.SUCCESS) {
             tts.language = Locale.US
-            speak("FriDay is listening.")
+            startListening()
         }
     }
 
@@ -129,56 +128,55 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         speechRecognizer.startListening(intent)
     }
 
-    // 🧠 Wake word logic
+    // 🧠 WAKE WORD + COMMAND LOGIC
     private fun handleSpeech(spokenText: String) {
         val text = spokenText.lowercase().trim()
 
-        if (!wakeActive) {
-            if (text.contains("friday")) {
-                wakeActive = true
-                speak("Yes?")
-            } else {
-                startListening()
-            }
+        // 🔕 Wake word required
+        if (!text.startsWith("friday")) {
+            startListening()
             return
         }
 
-        wakeActive = false
-        handleCommand(text)
+        val command = text.removePrefix("friday").trim()
+
+        // 🟢 Only wake word spoken
+        if (command.isEmpty()) {
+            speak("Yes Boss! How may I help you?")
+            return
+        }
+
+        handleCommand(command)
     }
 
-    // 🎤 COMMAND LOGIC
-    private fun handleCommand(text: String) {
-
+    private fun handleCommand(command: String) {
         when {
-            // ✅ Custom identity
-            text.contains("who are you") -> {
-                speak("I'm FriDay. Your personal robot.")
+            command.contains("who are you") -> {
+                speak("I'm FriDay. Your personal 🤖.")
             }
 
-            // ✅ Greeting (always Hi!)
-            text.contains("hello") || text.contains("hi") -> {
+            command.contains("hello") || command.contains("hi") -> {
                 speak("Hi!")
             }
 
-            text.contains("flashlight on") -> {
+            command.contains("flashlight on") -> {
                 turnFlashlight(true)
                 speak("Flashlight is now on.")
             }
 
-            text.contains("flashlight off") -> {
+            command.contains("flashlight off") -> {
                 turnFlashlight(false)
                 speak("Flashlight is now off.")
             }
 
-            text.contains("wifi on") || text.contains("wifi off") -> {
+            command.contains("wifi on") || command.contains("wifi off") -> {
                 speak("Opening WiFi control.")
                 startActivity(Intent(Settings.Panel.ACTION_WIFI))
             }
 
             else -> {
                 speak("Thinking.")
-                geminiHelper.getGeminiReply(text) { reply ->
+                geminiHelper.getGeminiReply(command) { reply ->
                     runOnUiThread {
                         speak(reply.take(350))
                     }
