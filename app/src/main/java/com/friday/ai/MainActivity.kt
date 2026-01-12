@@ -40,9 +40,11 @@ class MainActivity : AppCompatActivity() {
 
     private fun initSpeech() {
         speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this)
-        speechRecognizer.setRecognitionListener(SimpleRecognitionListener { text ->
-            handleCommand(text)
-        })
+        speechRecognizer.setRecognitionListener(
+            SimpleRecognitionListener { text ->
+                handleCommand(text)
+            }
+        )
     }
 
     private fun startListening() {
@@ -56,9 +58,35 @@ class MainActivity : AppCompatActivity() {
         speechRecognizer.startListening(intent)
     }
 
+    // 🔴 MAIN LOGIC — এখানে সব voice command handle হবে
     private fun handleCommand(command: String) {
-        Toast.makeText(this, "You said: $command", Toast.LENGTH_SHORT).show()
-        // Gemini API hook will be added here
+        val text = command.lowercase()
+
+        when {
+            text.contains("hello") -> {
+                Toast.makeText(this, "Hello Boss 👋", Toast.LENGTH_SHORT).show()
+            }
+
+            text.contains("wifi on") -> {
+                Toast.makeText(this, "WiFi ON command detected", Toast.LENGTH_SHORT).show()
+            }
+
+            text.contains("wifi off") -> {
+                Toast.makeText(this, "WiFi OFF command detected", Toast.LENGTH_SHORT).show()
+            }
+
+            text.contains("flashlight on") -> {
+                Toast.makeText(this, "Flashlight ON command detected", Toast.LENGTH_SHORT).show()
+            }
+
+            text.contains("flashlight off") -> {
+                Toast.makeText(this, "Flashlight OFF command detected", Toast.LENGTH_SHORT).show()
+            }
+
+            else -> {
+                Toast.makeText(this, "Command not recognized", Toast.LENGTH_SHORT).show()
+            }
+        }
     }
 
     override fun onDestroy() {
