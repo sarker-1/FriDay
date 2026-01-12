@@ -1,13 +1,15 @@
 package com.friday.ai
 
 import android.Manifest
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.hardware.camera2.CameraManager
+import android.os.Build
 import android.os.Bundle
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.speech.tts.TextToSpeech
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -17,6 +19,8 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
     private lateinit var speechRecognizer: SpeechRecognizer
     private lateinit var tts: TextToSpeech
+    private lateinit var cameraManager: CameraManager
+    private var cameraId: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -24,9 +28,11 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
         tts = TextToSpeech(this, this)
 
+        cameraManager = getSystemService(Context.CAMERA_SERVICE) as CameraManager
+        cameraId = cameraManager.cameraIdList.firstOrNull()
+
         requestMicPermission()
         initSpeech()
-        startListening()
     }
 
     // 🔊 TTS init
@@ -34,6 +40,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         if (status == TextToSpeech.SUCCESS) {
             tts.language = Locale.US
             speak("Hello Boss. FriDay is ready.")
+            startListening()
         }
     }
 
@@ -84,20 +91,22 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                 speak("Hello Boss. How can I help you?")
             }
 
-            text.contains("wifi on") -> {
-                speak("Turning WiFi on.")
-            }
-
-            text.contains("wifi off") -> {
-                speak("Turning WiFi off.")
-            }
-
             text.contains("flashlight on") -> {
+                turnFlashlight(true)
                 speak("Flashlight is now on.")
             }
 
             text.contains("flashlight off") -> {
+                turnFlashlight(false)
                 speak("Flashlight is now off.")
+            }
+
+            text.contains("wifi on") -> {
+                speak("WiFi control needs system permission. Feature coming soon.")
+            }
+
+            text.contains("wifi off") -> {
+                speak("WiFi control needs system permission. Feature coming soon.")
             }
 
             else -> {
@@ -107,6 +116,19 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
         // 🔁 Continuous listening
         startListening()
+    }
+
+    // 🔦 REAL Flashlight control
+    private fun turnFlashlight(state: Boolean) {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                cameraId?.let {
+                    cameraManager.setTorchMode(it, state)
+                }
+            }
+        } catch (e: Exception) {
+            speak("Flashlight control failed.")
+        }
     }
 
     override fun onDestroy() {
