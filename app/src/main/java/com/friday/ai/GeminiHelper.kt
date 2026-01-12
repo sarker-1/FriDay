@@ -1,5 +1,6 @@
 package com.friday.ai
 
+import com.friday.ai.BuildConfig
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -8,7 +9,7 @@ import org.json.JSONObject
 
 class GeminiHelper {
 
-    // 🔐 API key will come from BuildConfig (secure)
+    // 🔐 API key from BuildConfig (secure)
     private val API_KEY = BuildConfig.GEMINI_API_KEY
 
     private val client = OkHttpClient()
@@ -52,7 +53,11 @@ class GeminiHelper {
                     call: okhttp3.Call,
                     response: okhttp3.Response
                 ) {
-                    val responseBody = response.body?.string() ?: return
+                    val responseBody = response.body?.string() ?: run {
+                        callback("Empty response from Gemini.")
+                        return
+                    }
+
                     try {
                         val reply =
                             JSONObject(responseBody)
