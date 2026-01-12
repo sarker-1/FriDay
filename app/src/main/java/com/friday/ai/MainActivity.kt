@@ -7,6 +7,7 @@ import android.content.pm.PackageManager
 import android.hardware.camera2.CameraManager
 import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.speech.tts.TextToSpeech
@@ -112,12 +113,18 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                 speak("Flashlight is now off.")
             }
 
-            text.contains("wifi on") -> {
-                speak("WiFi control will be added soon.")
+            // 📶 LEGIT WiFi control (System panel)
+            text.contains("wifi on") || text.contains("wifi off") -> {
+                speak("Opening WiFi control.")
+                val intent = Intent(Settings.Panel.ACTION_WIFI)
+                startActivity(intent)
             }
 
-            text.contains("wifi off") -> {
-                speak("WiFi control will be added soon.")
+            // 📶 Fallback
+            text.contains("open wifi settings") -> {
+                speak("Opening WiFi settings.")
+                val intent = Intent(Settings.ACTION_WIFI_SETTINGS)
+                startActivity(intent)
             }
 
             else -> {
