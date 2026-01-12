@@ -21,13 +21,20 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private lateinit var tts: TextToSpeech
     private lateinit var cameraManager: CameraManager
     private var cameraId: String? = null
+    private var isListening = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        // 🔋 Start FriDay foreground background service
+        val serviceIntent = Intent(this, FriDayService::class.java)
+        ContextCompat.startForegroundService(this, serviceIntent)
+
+        // 🔊 Text to Speech
         tts = TextToSpeech(this, this)
 
+        // 🔦 Camera manager for flashlight
         cameraManager = getSystemService(Context.CAMERA_SERVICE) as CameraManager
         cameraId = cameraManager.cameraIdList.firstOrNull()
 
@@ -66,18 +73,22 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this)
         speechRecognizer.setRecognitionListener(
             SimpleRecognitionListener { text ->
+                isListening = false
                 handleCommand(text)
             }
         )
     }
 
     private fun startListening() {
+        if (isListening) return
+        isListening = true
+
         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
             putExtra(
                 RecognizerIntent.EXTRA_LANGUAGE_MODEL,
                 RecognizerIntent.LANGUAGE_MODEL_FREE_FORM
             )
-            putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
+            putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false)
         }
         speechRecognizer.startListening(intent)
     }
@@ -102,11 +113,11 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             }
 
             text.contains("wifi on") -> {
-                speak("WiFi control needs system permission. Feature coming soon.")
+                speak("WiFi control will be added soon.")
             }
 
             text.contains("wifi off") -> {
-                speak("WiFi control needs system permission. Feature coming soon.")
+                speak("WiFi control will be added soon.")
             }
 
             else -> {
@@ -114,7 +125,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             }
         }
 
-        // 🔁 Continuous listening
+        // 🔁 Restart listening safely
         startListening()
     }
 
