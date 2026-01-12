@@ -8,8 +8,8 @@ import org.json.JSONObject
 
 class GeminiHelper {
 
-    // 🔑 Gemini API Key (as provided)
-    private val API_KEY = "AIzaSyC-yl3p5gwO2YQPWtrXqoTzBJ2bl_B_AUA"
+    // 🔐 API key will come from BuildConfig (secure)
+    private val API_KEY = BuildConfig.GEMINI_API_KEY
 
     private val client = OkHttpClient()
 
@@ -45,24 +45,17 @@ class GeminiHelper {
             client.newCall(request).enqueue(object : okhttp3.Callback {
 
                 override fun onFailure(call: okhttp3.Call, e: java.io.IOException) {
-                    callback("Sorry Boss, I cannot reach the internet right now.")
+                    callback("I'm offline right now.")
                 }
 
                 override fun onResponse(
                     call: okhttp3.Call,
                     response: okhttp3.Response
                 ) {
-                    val responseBody = response.body?.string()
-
-                    if (!response.isSuccessful || responseBody == null) {
-                        callback("I could not understand the response.")
-                        return
-                    }
-
+                    val responseBody = response.body?.string() ?: return
                     try {
-                        val jsonResponse = JSONObject(responseBody)
                         val reply =
-                            jsonResponse
+                            JSONObject(responseBody)
                                 .getJSONArray("candidates")
                                 .getJSONObject(0)
                                 .getJSONObject("content")
@@ -71,15 +64,13 @@ class GeminiHelper {
                                 .getString("text")
 
                         callback(reply.trim())
-
-                    } catch (e: Exception) {
-                        callback("Gemini response parsing error.")
+                    } catch (_: Exception) {
+                        callback("I couldn't process that.")
                     }
                 }
             })
-
-        } catch (e: Exception) {
-            callback("Gemini error occurred.")
+        } catch (_: Exception) {
+            callback("Gemini error.")
         }
     }
 }
