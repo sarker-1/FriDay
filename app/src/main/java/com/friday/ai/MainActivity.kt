@@ -23,6 +23,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private lateinit var speechRecognizer: SpeechRecognizer
     private lateinit var tts: TextToSpeech
     private lateinit var cameraManager: CameraManager
+    private lateinit var geminiHelper: GeminiHelper
     private var cameraId: String? = null
     private var isListening = false
 
@@ -37,6 +38,9 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         // 🔊 Text to Speech
         tts = TextToSpeech(this, this)
 
+        // 🤖 Gemini helper
+        geminiHelper = GeminiHelper()
+
         // 🔦 Camera manager for flashlight
         cameraManager = getSystemService(Context.CAMERA_SERVICE) as CameraManager
         cameraId = cameraManager.cameraIdList.firstOrNull()
@@ -50,7 +54,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     override fun onInit(status: Int) {
         if (status == TextToSpeech.SUCCESS) {
             tts.language = Locale.US
-            speak("Hello Boss. FriDay is ready. Please allow battery optimization exemption for best performance.")
+            speak("Hello Boss. FriDay is ready.")
             startListening()
         }
     }
@@ -73,7 +77,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         }
     }
 
-    // 🔋 Battery optimization ignore request (user consent)
+    // 🔋 Battery optimization ignore request
     private fun requestIgnoreBatteryOptimization() {
         try {
             val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
@@ -84,9 +88,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                 )
                 startActivity(intent)
             }
-        } catch (e: Exception) {
-            // silently ignore
-        }
+        } catch (_: Exception) { }
     }
 
     private fun initSpeech() {
@@ -120,39 +122,45 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         when {
             text.contains("hello") -> {
                 speak("Hello Boss. How can I help you?")
+                startListening()
             }
 
             text.contains("flashlight on") -> {
                 turnFlashlight(true)
                 speak("Flashlight is now on.")
+                startListening()
             }
 
             text.contains("flashlight off") -> {
                 turnFlashlight(false)
                 speak("Flashlight is now off.")
+                startListening()
             }
 
-            // 📶 LEGIT WiFi control (System panel)
+            // 📶 LEGIT WiFi control
             text.contains("wifi on") || text.contains("wifi off") -> {
                 speak("Opening WiFi control.")
-                val intent = Intent(Settings.Panel.ACTION_WIFI)
-                startActivity(intent)
+                startActivity(Intent(Settings.Panel.ACTION_WIFI))
+                startListening()
             }
 
-            // 📶 Fallback
             text.contains("open wifi settings") -> {
                 speak("Opening WiFi settings.")
-                val intent = Intent(Settings.ACTION_WIFI_SETTINGS)
-                startActivity(intent)
+                startActivity(Intent(Settings.ACTION_WIFI_SETTINGS))
+                startListening()
             }
 
+            // 🤖 Fallback → Gemini
             else -> {
-                speak("Sorry Boss, I did not understand.")
+                speak("Thinking...")
+                geminiHelper.getGeminiReply(text) { reply ->
+                    runOnUiThread {
+                        speak(reply)
+                        startListening()
+                    }
+                }
             }
         }
-
-        // 🔁 Restart listening safely
-        startListening()
     }
 
     // 🔦 REAL Flashlight control
@@ -163,7 +171,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                     cameraManager.setTorchMode(it, state)
                 }
             }
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             speak("Flashlight control failed.")
         }
     }
