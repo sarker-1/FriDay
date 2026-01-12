@@ -13,6 +13,7 @@ import android.provider.Settings
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.speech.tts.TextToSpeech
+import android.widget.ImageView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -33,6 +34,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        // 🔋 Foreground service
         ContextCompat.startForegroundService(
             this,
             Intent(this, FriDayService::class.java)
@@ -43,6 +45,15 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
         cameraManager = getSystemService(Context.CAMERA_SERVICE) as CameraManager
         cameraId = cameraManager.cameraIdList.firstOrNull()
+
+        // 🔘 Power Button Manual Trigger
+        val powerButton = findViewById<ImageView>(R.id.powerButton)
+        powerButton.setOnClickListener {
+            if (!isListening && !isSpeaking) {
+                speak("Listening")
+                startListening()
+            }
+        }
 
         requestMicPermission()
         requestIgnoreBatteryOptimization()
@@ -128,11 +139,10 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         speechRecognizer.startListening(intent)
     }
 
-    // 🧠 WAKE WORD + COMMAND LOGIC
+    // 🧠 Wake word + command
     private fun handleSpeech(spokenText: String) {
         val text = spokenText.lowercase().trim()
 
-        // 🔕 Wake word required
         if (!text.startsWith("friday")) {
             startListening()
             return
@@ -140,7 +150,6 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
         val command = text.removePrefix("friday").trim()
 
-        // 🟢 Only wake word spoken
         if (command.isEmpty()) {
             speak("Yes Boss! How may I help you?")
             return
