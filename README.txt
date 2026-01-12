@@ -1,8 +1,27 @@
+FriDay AI – Android Voice Assistant
 
-FriDay AI – Complete Drag & Drop Project
+FriDay is a minimal, voice-first Android AI assistant.
 
-1. Import this folder into any AI App Builder / Android Studio
-2. Replace logic using Gemini or other AI tools
-3. UI is clean, minimal, voice-first
+Features:
+- Voice command support
+- Speech to text
+- AI intent detection (Gemini planned)
+- Clean and minimal UI
+- Offline command handling (basic)
 
-No UI clutter by design.
+Planned Voice Commands:
+- WiFi on / off
+- Flashlight on / off
+- Open YouTube
+- Open WhatsApp
+- Call a contact
+- Battery status
+
+Permissions Used:
+- Internet
+- Microphone
+- System control (as required)
+
+Status:
+Project structure completed.
+Logic and AI integration in progress.
