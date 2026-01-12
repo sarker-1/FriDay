@@ -24,16 +24,20 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private lateinit var tts: TextToSpeech
     private lateinit var cameraManager: CameraManager
     private lateinit var geminiHelper: GeminiHelper
+
     private var cameraId: String? = null
     private var isListening = false
+    private var isSpeaking = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
         // 🔋 Start FriDay foreground background service
-        val serviceIntent = Intent(this, FriDayService::class.java)
-        ContextCompat.startForegroundService(this, serviceIntent)
+        ContextCompat.startForegroundService(
+            this,
+            Intent(this, FriDayService::class.java)
+        )
 
         // 🔊 Text to Speech
         tts = TextToSpeech(this, this)
@@ -41,7 +45,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         // 🤖 Gemini helper
         geminiHelper = GeminiHelper()
 
-        // 🔦 Camera manager for flashlight
+        // 🔦 Camera manager
         cameraManager = getSystemService(Context.CAMERA_SERVICE) as CameraManager
         cameraId = cameraManager.cameraIdList.firstOrNull()
 
@@ -55,12 +59,28 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         if (status == TextToSpeech.SUCCESS) {
             tts.language = Locale.US
             speak("Hello Boss. FriDay is ready.")
-            startListening()
         }
     }
 
     private fun speak(text: String) {
-        tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, null)
+        isSpeaking = true
+        tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "FRIDAY_TTS")
+
+        tts.setOnUtteranceProgressListener(object :
+            android.speech.tts.UtteranceProgressListener() {
+
+            override fun onStart(utteranceId: String?) {}
+
+            override fun onDone(utteranceId: String?) {
+                isSpeaking = false
+                startListening()
+            }
+
+            override fun onError(utteranceId: String?) {
+                isSpeaking = false
+                startListening()
+            }
+        })
     }
 
     private fun requestMicPermission() {
@@ -82,11 +102,12 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         try {
             val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
             if (!pm.isIgnoringBatteryOptimizations(packageName)) {
-                val intent = Intent(
-                    Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
-                    Uri.parse("package:$packageName")
+                startActivity(
+                    Intent(
+                        Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+                        Uri.parse("package:$packageName")
+                    )
                 )
-                startActivity(intent)
             }
         } catch (_: Exception) { }
     }
@@ -102,7 +123,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     }
 
     private fun startListening() {
-        if (isListening) return
+        if (isListening || isSpeaking) return
         isListening = true
 
         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
@@ -110,60 +131,56 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                 RecognizerIntent.EXTRA_LANGUAGE_MODEL,
                 RecognizerIntent.LANGUAGE_MODEL_FREE_FORM
             )
-            putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false)
         }
         speechRecognizer.startListening(intent)
     }
 
     // 🎤 MAIN COMMAND LOGIC
     private fun handleCommand(command: String) {
-        val text = command.lowercase()
+        val text = command.lowercase().trim()
 
         when {
             text.contains("hello") -> {
                 speak("Hello Boss. How can I help you?")
-                startListening()
             }
 
             text.contains("flashlight on") -> {
                 turnFlashlight(true)
                 speak("Flashlight is now on.")
-                startListening()
             }
 
             text.contains("flashlight off") -> {
                 turnFlashlight(false)
                 speak("Flashlight is now off.")
-                startListening()
             }
 
-            // 📶 LEGIT WiFi control
             text.contains("wifi on") || text.contains("wifi off") -> {
                 speak("Opening WiFi control.")
                 startActivity(Intent(Settings.Panel.ACTION_WIFI))
-                startListening()
             }
 
             text.contains("open wifi settings") -> {
                 speak("Opening WiFi settings.")
                 startActivity(Intent(Settings.ACTION_WIFI_SETTINGS))
-                startListening()
             }
 
-            // 🤖 Fallback → Gemini
+            // 🤖 Gemini fallback
             else -> {
-                speak("Thinking...")
+                speak("Thinking.")
                 geminiHelper.getGeminiReply(text) { reply ->
                     runOnUiThread {
-                        speak(reply)
-                        startListening()
+                        val cleanReply = reply
+                            .replace("\n", " ")
+                            .take(400)
+
+                        speak(cleanReply)
                     }
                 }
             }
         }
     }
 
-    // 🔦 REAL Flashlight control
+    // 🔦 Flashlight
     private fun turnFlashlight(state: Boolean) {
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
