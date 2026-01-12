@@ -5,8 +5,10 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.hardware.camera2.CameraManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.PowerManager
 import android.provider.Settings
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
@@ -40,6 +42,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         cameraId = cameraManager.cameraIdList.firstOrNull()
 
         requestMicPermission()
+        requestIgnoreBatteryOptimization()
         initSpeech()
     }
 
@@ -47,7 +50,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     override fun onInit(status: Int) {
         if (status == TextToSpeech.SUCCESS) {
             tts.language = Locale.US
-            speak("Hello Boss. FriDay is ready.")
+            speak("Hello Boss. FriDay is ready. Please allow battery optimization exemption for best performance.")
             startListening()
         }
     }
@@ -67,6 +70,22 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                 arrayOf(Manifest.permission.RECORD_AUDIO),
                 100
             )
+        }
+    }
+
+    // 🔋 Battery optimization ignore request (user consent)
+    private fun requestIgnoreBatteryOptimization() {
+        try {
+            val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
+            if (!pm.isIgnoringBatteryOptimizations(packageName)) {
+                val intent = Intent(
+                    Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+                    Uri.parse("package:$packageName")
+                )
+                startActivity(intent)
+            }
+        } catch (e: Exception) {
+            // silently ignore
         }
     }
 
