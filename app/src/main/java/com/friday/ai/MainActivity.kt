@@ -1,10 +1,8 @@
 package com.friday.ai
 
 import android.Manifest
-import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.hardware.camera2.CameraManager
 import android.os.Bundle
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
@@ -13,22 +11,16 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import java.util.*
+import java.util.Locale
 
 class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
     private lateinit var speechRecognizer: SpeechRecognizer
     private lateinit var tts: TextToSpeech
-    private lateinit var cameraManager: CameraManager
-    private var cameraId: String? = null
-    private var isFlashOn = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-
-        cameraManager = getSystemService(Context.CAMERA_SERVICE) as CameraManager
-        cameraId = cameraManager.cameraIdList.firstOrNull()
 
         tts = TextToSpeech(this, this)
 
@@ -37,9 +29,11 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         startListening()
     }
 
+    // 🔊 TTS init
     override fun onInit(status: Int) {
         if (status == TextToSpeech.SUCCESS) {
             tts.language = Locale.US
+            speak("Hello Boss. FriDay is ready.")
         }
     }
 
@@ -66,7 +60,6 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         speechRecognizer.setRecognitionListener(
             SimpleRecognitionListener { text ->
                 handleCommand(text)
-                startListening() // 🔁 continuous listening
             }
         )
     }
@@ -77,44 +70,43 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                 RecognizerIntent.EXTRA_LANGUAGE_MODEL,
                 RecognizerIntent.LANGUAGE_MODEL_FREE_FORM
             )
-            putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false)
+            putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
         }
         speechRecognizer.startListening(intent)
     }
 
+    // 🎤 MAIN COMMAND LOGIC
     private fun handleCommand(command: String) {
         val text = command.lowercase()
 
         when {
             text.contains("hello") -> {
-                speak("Hello Boss")
+                speak("Hello Boss. How can I help you?")
+            }
+
+            text.contains("wifi on") -> {
+                speak("Turning WiFi on.")
+            }
+
+            text.contains("wifi off") -> {
+                speak("Turning WiFi off.")
             }
 
             text.contains("flashlight on") -> {
-                turnFlashlight(true)
-                speak("Flashlight turned on")
+                speak("Flashlight is now on.")
             }
 
             text.contains("flashlight off") -> {
-                turnFlashlight(false)
-                speak("Flashlight turned off")
+                speak("Flashlight is now off.")
             }
 
             else -> {
-                speak("Command not recognized")
+                speak("Sorry Boss, I did not understand.")
             }
         }
-    }
 
-    private fun turnFlashlight(turnOn: Boolean) {
-        try {
-            cameraId?.let {
-                cameraManager.setTorchMode(it, turnOn)
-                isFlashOn = turnOn
-            }
-        } catch (e: Exception) {
-            Toast.makeText(this, "Flashlight error", Toast.LENGTH_SHORT).show()
-        }
+        // 🔁 Continuous listening
+        startListening()
     }
 
     override fun onDestroy() {
