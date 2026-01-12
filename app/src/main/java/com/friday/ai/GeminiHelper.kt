@@ -1,22 +1,85 @@
 package com.friday.ai
 
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
+import org.json.JSONObject
+
 class GeminiHelper {
 
-    fun getReply(userInput: String): String {
-        val text = userInput.lowercase()
+    // 🔑 Gemini API Key (as provided)
+    private val API_KEY = "AIzaSyC-yl3p5gwO2YQPWtrXqoTzBJ2bl_B_AUA"
 
-        return when {
-            text.contains("hello") ->
-                "Hello Boss, I am FriDay."
+    private val client = OkHttpClient()
 
-            text.contains("who are you") ->
-                "I am FriDay, your personal AI assistant."
+    fun getGeminiReply(
+        userInput: String,
+        callback: (String) -> Unit
+    ) {
+        try {
+            val url =
+                "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=$API_KEY"
 
-            text.contains("what can you do") ->
-                "I can listen to your voice and control your phone."
+            val json = JSONObject().apply {
+                put(
+                    "contents",
+                    listOf(
+                        mapOf(
+                            "parts" to listOf(
+                                mapOf("text" to userInput)
+                            )
+                        )
+                    )
+                )
+            }
 
-            else ->
-                "I understood your command."
+            val body = json.toString()
+                .toRequestBody("application/json".toMediaType())
+
+            val request = Request.Builder()
+                .url(url)
+                .post(body)
+                .build()
+
+            client.newCall(request).enqueue(object : okhttp3.Callback {
+
+                override fun onFailure(call: okhttp3.Call, e: java.io.IOException) {
+                    callback("Sorry Boss, I cannot reach the internet right now.")
+                }
+
+                override fun onResponse(
+                    call: okhttp3.Call,
+                    response: okhttp3.Response
+                ) {
+                    val responseBody = response.body?.string()
+
+                    if (!response.isSuccessful || responseBody == null) {
+                        callback("I could not understand the response.")
+                        return
+                    }
+
+                    try {
+                        val jsonResponse = JSONObject(responseBody)
+                        val reply =
+                            jsonResponse
+                                .getJSONArray("candidates")
+                                .getJSONObject(0)
+                                .getJSONObject("content")
+                                .getJSONArray("parts")
+                                .getJSONObject(0)
+                                .getString("text")
+
+                        callback(reply.trim())
+
+                    } catch (e: Exception) {
+                        callback("Gemini response parsing error.")
+                    }
+                }
+            })
+
+        } catch (e: Exception) {
+            callback("Gemini error occurred.")
         }
     }
 }
